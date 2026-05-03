@@ -257,7 +257,9 @@ function render() {
   el.clockOutTime.textContent = formatTime(today?.clock_out_at);
   el.clockInButton.disabled = Boolean(today?.clock_in_at);
   el.clockOutButton.disabled = !today?.clock_in_at || Boolean(today?.clock_out_at);
-  el.editTodayButton.disabled = !isConfigured();
+  if (el.editTodayButton) {
+    el.editTodayButton.disabled = !isConfigured();
+  }
 
   if (!isConfigured()) {
     el.statusTitle.textContent = "尚未設定";
@@ -332,17 +334,17 @@ el.clearSettingsButton.addEventListener("click", () => {
 
 el.clockInButton.addEventListener("click", () => clock("in"));
 el.clockOutButton.addEventListener("click", () => clock("out"));
-el.editTodayButton.addEventListener("click", () => {
+el.editTodayButton?.addEventListener("click", () => {
   openEditDialog(entries.find((entry) => entry.work_date === todayDate()));
 });
 
-el.entryList.addEventListener("click", (event) => {
+el.entryList?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-edit-date]");
   if (!button) return;
   openEditDialog(entries.find((entry) => entry.work_date === button.dataset.editDate));
 });
 
-el.editForm.addEventListener("submit", (event) => {
+el.editForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   saveEditedEntry();
 });
