@@ -170,6 +170,17 @@ h2 {
   opacity: 0.9;
 }
 
+.edit-today-button {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 253, 250, 0.72);
+  color: var(--ink);
+  font-weight: 800;
+}
+
 .month-summary {
   margin-top: 28px;
 }
@@ -186,7 +197,7 @@ h2 {
 
 .entry-row {
   display: grid;
-  grid-template-columns: 84px 1fr auto;
+  grid-template-columns: 84px 1fr auto auto;
   gap: 12px;
   align-items: center;
   padding: 14px;
@@ -205,6 +216,16 @@ h2 {
 }
 
 .entry-hours {
+  font-weight: 800;
+}
+
+.entry-edit {
+  min-width: 44px;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--accent-dark);
   font-weight: 800;
 }
 
@@ -318,5 +339,9 @@ h2 {
 
   .entry-times {
     grid-column: 1 / -1;
+  }
+
+  .entry-edit {
+    grid-column: 2;
   }
 }

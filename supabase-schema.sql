@@ -71,6 +71,43 @@ as $$
   order by work_date desc;
 $$;
 
+create or replace function public.set_clock_entry(
+  p_app_key text,
+  p_work_date date,
+  p_clock_in_at timestamptz,
+  p_clock_out_at timestamptz
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_clock_out_at is not null and p_clock_out_at < p_clock_in_at then
+    raise exception 'clock_out_at cannot be earlier than clock_in_at';
+  end if;
+
+  insert into public.time_entries (
+    app_key_hash,
+    work_date,
+    clock_in_at,
+    clock_out_at
+  )
+  values (
+    encode(extensions.digest(p_app_key, 'sha256'), 'hex'),
+    p_work_date,
+    p_clock_in_at,
+    p_clock_out_at
+  )
+  on conflict (app_key_hash, work_date)
+  do update set
+    clock_in_at = excluded.clock_in_at,
+    clock_out_at = excluded.clock_out_at,
+    updated_at = now();
+end;
+$$;
+
 grant execute on function public.clock_in(text, date) to anon;
 grant execute on function public.clock_out(text, date) to anon;
 grant execute on function public.get_clock_month(text, date, date) to anon;
+grant execute on function public.set_clock_entry(text, date, timestamptz, timestamptz) to anon;

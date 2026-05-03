@@ -47,6 +47,7 @@
           <small id="clockOutTime">--:--</small>
         </button>
       </section>
+      <button class="edit-today-button" id="editTodayButton" type="button">修改今日時間</button>
 
       <section class="month-summary">
         <div class="section-heading">
@@ -85,6 +86,33 @@
         <div class="settings-actions">
           <button class="ghost-button" id="clearSettingsButton" type="button">清除</button>
           <button class="save-button" value="default">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="settings-dialog" id="editDialog">
+      <form method="dialog" class="settings-card" id="editForm">
+        <header>
+          <h2>修改打卡時間</h2>
+          <button class="icon-button" value="cancel" aria-label="關閉" title="關閉">×</button>
+        </header>
+
+        <label>
+          日期
+          <input id="editWorkDate" type="date" required />
+        </label>
+        <label>
+          上班時間
+          <input id="editClockIn" type="datetime-local" required />
+        </label>
+        <label>
+          下班時間
+          <input id="editClockOut" type="datetime-local" />
+        </label>
+
+        <div class="settings-actions">
+          <button class="ghost-button" value="cancel">取消</button>
+          <button class="save-button" value="default">儲存修改</button>
         </div>
       </form>
     </dialog>

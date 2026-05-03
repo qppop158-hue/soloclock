@@ -14,11 +14,17 @@ const el = {
   todayHours: document.querySelector("#todayHours"),
   clockInButton: document.querySelector("#clockInButton"),
   clockOutButton: document.querySelector("#clockOutButton"),
+  editTodayButton: document.querySelector("#editTodayButton"),
   clockInTime: document.querySelector("#clockInTime"),
   clockOutTime: document.querySelector("#clockOutTime"),
   monthLabel: document.querySelector("#monthLabel"),
   monthHours: document.querySelector("#monthHours"),
   entryList: document.querySelector("#entryList"),
+  editDialog: document.querySelector("#editDialog"),
+  editForm: document.querySelector("#editForm"),
+  editWorkDate: document.querySelector("#editWorkDate"),
+  editClockIn: document.querySelector("#editClockIn"),
+  editClockOut: document.querySelector("#editClockOut"),
   toast: document.querySelector("#toast"),
 };
 
@@ -65,6 +71,18 @@ function formatTime(value) {
   }).format(new Date(value));
 }
 
+function toDateTimeLocal(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function fromDateTimeLocal(value) {
+  if (!value) return null;
+  return new Date(value).toISOString();
+}
+
 function formatDate(value) {
   return new Intl.DateTimeFormat("zh-TW", {
     month: "2-digit",
@@ -87,19 +105,32 @@ function showToast(message) {
 
 async function rpc(functionName, body) {
   const baseUrl = settings.supabaseUrl.replace(/\/$/, "");
+  const apiKey = settings.supabaseAnonKey.trim();
+  const headers = {
+    apikey: apiKey,
+    "Content-Type": "application/json",
+  };
+
+  if (!apiKey.startsWith("sb_publishable_")) {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
   const response = await fetch(`${baseUrl}/rest/v1/rpc/${functionName}`, {
     method: "POST",
-    headers: {
-      apikey: settings.supabaseAnonKey,
-      Authorization: `Bearer ${settings.supabaseAnonKey}`,
-      "Content-Type": "application/json",
-    },
+    headers,
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     const text = await response.text();
-    throw new Error(text || `Supabase request failed: ${response.status}`);
+    let message = text || `Supabase request failed: ${response.status}`;
+
+    try {
+      const parsed = JSON.parse(text);
+      message = parsed.message || parsed.msg || message;
+    } catch {}
+
+    throw new Error(message);
   }
 
   if (response.status === 204) return null;
@@ -123,7 +154,7 @@ async function refreshEntries() {
     render();
   } catch (error) {
     render();
-    showToast("無法讀取雲端資料，請檢查設定。");
+    showToast(`無法讀取：${error.message}`);
     console.error(error);
   }
 }
@@ -145,10 +176,58 @@ async function clock(action) {
     showToast(action === "in" ? "上班時間已記錄" : "下班時間已記錄");
     await refreshEntries();
   } catch (error) {
-    showToast("打卡失敗，請稍後再試。");
+    showToast(`打卡失敗：${error.message}`);
     console.error(error);
   } finally {
     button.disabled = false;
+  }
+}
+
+function openEditDialog(entry) {
+  if (!isConfigured()) {
+    el.settingsDialog.showModal();
+    return;
+  }
+
+  const fallbackDate = todayDate();
+  const workDate = entry?.work_date ?? fallbackDate;
+  const now = new Date();
+  const defaultClockIn = new Date(`${workDate}T09:00:00`);
+  const defaultClockOut = new Date(`${workDate}T18:00:00`);
+
+  el.editWorkDate.value = workDate;
+  el.editClockIn.value = toDateTimeLocal(entry?.clock_in_at ?? defaultClockIn.toISOString());
+  el.editClockOut.value = toDateTimeLocal(entry?.clock_out_at ?? (entry?.clock_in_at ? now.toISOString() : defaultClockOut.toISOString()));
+  el.editDialog.showModal();
+}
+
+async function saveEditedEntry() {
+  if (!isConfigured()) {
+    el.settingsDialog.showModal();
+    return;
+  }
+
+  const clockIn = fromDateTimeLocal(el.editClockIn.value);
+  const clockOut = fromDateTimeLocal(el.editClockOut.value);
+
+  if (clockOut && new Date(clockOut) < new Date(clockIn)) {
+    showToast("下班時間不能早於上班時間");
+    return;
+  }
+
+  try {
+    await rpc("set_clock_entry", {
+      p_app_key: settings.privateKey,
+      p_work_date: el.editWorkDate.value,
+      p_clock_in_at: clockIn,
+      p_clock_out_at: clockOut,
+    });
+    el.editDialog.close();
+    showToast("打卡時間已修改");
+    await refreshEntries();
+  } catch (error) {
+    showToast(`修改失敗：${error.message}`);
+    console.error(error);
   }
 }
 
@@ -178,6 +257,7 @@ function render() {
   el.clockOutTime.textContent = formatTime(today?.clock_out_at);
   el.clockInButton.disabled = Boolean(today?.clock_in_at);
   el.clockOutButton.disabled = !today?.clock_in_at || Boolean(today?.clock_out_at);
+  el.editTodayButton.disabled = !isConfigured();
 
   if (!isConfigured()) {
     el.statusTitle.textContent = "尚未設定";
@@ -212,6 +292,7 @@ function renderEntryList() {
           <div class="entry-date">${formatDate(entry.work_date)}</div>
           <div class="entry-times">${formatTime(entry.clock_in_at)} - ${formatTime(entry.clock_out_at)}</div>
           <div class="entry-hours">${hours.toFixed(2)}h</div>
+          <button class="entry-edit" type="button" data-edit-date="${entry.work_date}">修改</button>
         </article>
       `;
     })
@@ -251,6 +332,20 @@ el.clearSettingsButton.addEventListener("click", () => {
 
 el.clockInButton.addEventListener("click", () => clock("in"));
 el.clockOutButton.addEventListener("click", () => clock("out"));
+el.editTodayButton.addEventListener("click", () => {
+  openEditDialog(entries.find((entry) => entry.work_date === todayDate()));
+});
+
+el.entryList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-edit-date]");
+  if (!button) return;
+  openEditDialog(entries.find((entry) => entry.work_date === button.dataset.editDate));
+});
+
+el.editForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveEditedEntry();
+});
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js").catch(() => {});
