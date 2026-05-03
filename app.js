@@ -103,6 +103,31 @@ function showToast(message) {
   showToast.timer = window.setTimeout(() => el.toast.classList.remove("visible"), 2600);
 }
 
+function openDialog(dialog) {
+  if (!dialog) {
+    showToast("找不到修改視窗，請重新部署完整檔案");
+    return false;
+  }
+
+  if (typeof dialog.showModal === "function" && !dialog.open) {
+    dialog.showModal();
+  } else {
+    dialog.setAttribute("open", "");
+  }
+
+  return true;
+}
+
+function closeDialog(dialog) {
+  if (!dialog) return;
+
+  if (typeof dialog.close === "function" && dialog.open) {
+    dialog.close();
+  } else {
+    dialog.removeAttribute("open");
+  }
+}
+
 async function rpc(functionName, body) {
   const baseUrl = settings.supabaseUrl.replace(/\/$/, "");
   const apiKey = settings.supabaseAnonKey.trim();
@@ -141,7 +166,7 @@ async function refreshEntries() {
   if (!isConfigured()) {
     entries = [];
     render();
-    el.settingsDialog.showModal();
+    openDialog(el.settingsDialog);
     return;
   }
 
@@ -161,7 +186,7 @@ async function refreshEntries() {
 
 async function clock(action) {
   if (!isConfigured()) {
-    el.settingsDialog.showModal();
+    openDialog(el.settingsDialog);
     return;
   }
 
@@ -185,7 +210,12 @@ async function clock(action) {
 
 function openEditDialog(entry) {
   if (!isConfigured()) {
-    el.settingsDialog.showModal();
+    openDialog(el.settingsDialog);
+    return;
+  }
+
+  if (!el.editWorkDate || !el.editClockIn || !el.editClockOut) {
+    showToast("修改表單未載入，請重新上傳 index.html");
     return;
   }
 
@@ -198,12 +228,12 @@ function openEditDialog(entry) {
   el.editWorkDate.value = workDate;
   el.editClockIn.value = toDateTimeLocal(entry?.clock_in_at ?? defaultClockIn.toISOString());
   el.editClockOut.value = toDateTimeLocal(entry?.clock_out_at ?? (entry?.clock_in_at ? now.toISOString() : defaultClockOut.toISOString()));
-  el.editDialog.showModal();
+  openDialog(el.editDialog);
 }
 
 async function saveEditedEntry() {
   if (!isConfigured()) {
-    el.settingsDialog.showModal();
+    openDialog(el.settingsDialog);
     return;
   }
 
@@ -222,7 +252,7 @@ async function saveEditedEntry() {
       p_clock_in_at: clockIn,
       p_clock_out_at: clockOut,
     });
-    el.editDialog.close();
+    closeDialog(el.editDialog);
     showToast("打卡時間已修改");
     await refreshEntries();
   } catch (error) {
@@ -309,7 +339,7 @@ function fillSettingsForm() {
 
 el.settingsButton.addEventListener("click", () => {
   fillSettingsForm();
-  el.settingsDialog.showModal();
+  openDialog(el.settingsDialog);
 });
 
 el.settingsForm.addEventListener("submit", (event) => {
@@ -319,9 +349,15 @@ el.settingsForm.addEventListener("submit", (event) => {
     supabaseAnonKey: el.supabaseAnonKey.value.trim(),
     privateKey: el.privateKey.value.trim(),
   });
-  el.settingsDialog.close();
+  closeDialog(el.settingsDialog);
   showToast("設定已儲存");
   refreshEntries();
+});
+
+document.addEventListener("click", (event) => {
+  const closeButton = event.target.closest("[data-close-dialog]");
+  if (!closeButton) return;
+  closeDialog(closeButton.closest("dialog"));
 });
 
 el.clearSettingsButton.addEventListener("click", () => {
