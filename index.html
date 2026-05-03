@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f7f3ec" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="打卡" />
+    <title>打卡</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="./icon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="todayLabel">今天</p>
+          <h1>打卡</h1>
+        </div>
+        <button class="icon-button" id="settingsButton" aria-label="設定" title="設定">
+          <span aria-hidden="true">⚙</span>
+        </button>
+      </header>
+
+      <section class="status-panel">
+        <div class="status-copy">
+          <p class="label">目前狀態</p>
+          <h2 id="statusTitle">尚未設定</h2>
+          <p id="statusSubtitle">先填入 Supabase 設定後即可開始。</p>
+        </div>
+        <div class="hours-ring" aria-label="今日工時">
+          <span id="todayHours">0.00</span>
+          <small>小時</small>
+        </div>
+      </section>
+
+      <section class="actions" aria-label="打卡操作">
+        <button class="primary-action" id="clockInButton">
+          <span>上班</span>
+          <small id="clockInTime">--:--</small>
+        </button>
+        <button class="secondary-action" id="clockOutButton">
+          <span>下班</span>
+          <small id="clockOutTime">--:--</small>
+        </button>
+      </section>
+
+      <section class="month-summary">
+        <div class="section-heading">
+          <div>
+            <p class="label">本月總結</p>
+            <h2 id="monthLabel">本月</h2>
+          </div>
+          <strong id="monthHours">0.00 小時</strong>
+        </div>
+        <div class="entry-list" id="entryList">
+          <p class="empty">還沒有打卡紀錄。</p>
+        </div>
+      </section>
+    </main>
+
+    <dialog class="settings-dialog" id="settingsDialog">
+      <form method="dialog" class="settings-card" id="settingsForm">
+        <header>
+          <h2>雲端設定</h2>
+          <button class="icon-button" value="cancel" aria-label="關閉" title="關閉">×</button>
+        </header>
+
+        <label>
+          Supabase URL
+          <input id="supabaseUrl" placeholder="https://xxxx.supabase.co" autocomplete="off" />
+        </label>
+        <label>
+          Supabase anon key
+          <textarea id="supabaseAnonKey" rows="3" autocomplete="off"></textarea>
+        </label>
+        <label>
+          私人打卡 key
+          <input id="privateKey" placeholder="自己設定一串不容易猜的文字" autocomplete="off" />
+        </label>
+
+        <div class="settings-actions">
+          <button class="ghost-button" id="clearSettingsButton" type="button">清除</button>
+          <button class="save-button" value="default">儲存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
